@@ -111,9 +111,22 @@ export function useSceneGraphSync(sessionId: string | null) {
         surface_modifications (*)
       `)
       .eq('id', sessionId)
-      .single();
+      // maybeSingle, not single: .single() answers 0 rows with HTTP 406,
+      // which the browser logs as a failed request no matter how the
+      // result is handled. A session that is absent or not visible to
+      // this user is an ordinary outcome, so ask a question that has a
+      // null answer.
+      .maybeSingle();
 
     if (error || !sessionDataRaw) {
+      // PGRST116 is "0 rows", which is what .single() reports for a
+      // session that does not exist or that this user cannot see. That
+      // is an ordinary state — a fresh visitor with no session in the
+      // URL — not a failure, and logging it as an error makes an empty
+      // app look broken.
+      if (error?.code === 'PGRST116' || !error) {
+        return;
+      }
       console.error('[SceneSync] Error querying authoritative state:', error);
       return;
     }

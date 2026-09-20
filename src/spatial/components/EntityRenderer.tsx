@@ -79,8 +79,35 @@ export const EntityRenderer: React.FC<EntityRendererProps> = ({ entity }) => {
               entity.boundingBox.extents[2] * 2,
             ]}
           />
-          <meshStandardMaterial color="#FF3366" wireframe />
+          {/* Solid, not wireframe. A catalog item with no GLB still has
+              real dimensions, and this proxy is what the user sees while
+              the asset is missing. Thin red lines vanish against a
+              camera passthrough feed — a translucent solid reads as an
+              object occupying space, which is the point of placing it. */}
+          <meshStandardMaterial
+            color="#FF3366"
+            transparent
+            opacity={0.35}
+            roughness={0.6}
+            depthWrite={false}
+          />
         </mesh>
+      )}
+      {loadError && (
+        // Edges on top of the solid, so the footprint stays readable
+        // against a busy background.
+        <lineSegments position={[0, entity.boundingBox.extents[1], 0]}>
+          <edgesGeometry
+            args={[
+              new THREE.BoxGeometry(
+                entity.boundingBox.extents[0] * 2,
+                entity.boundingBox.extents[1] * 2,
+                entity.boundingBox.extents[2] * 2
+              ),
+            ]}
+          />
+          <lineBasicMaterial color="#FFB3C4" />
+        </lineSegments>
       )}
 
       {entity.isGhost && (

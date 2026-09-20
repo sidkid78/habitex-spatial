@@ -1,9 +1,11 @@
 'use client';
 
 import React, { Suspense, useEffect, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Canvas, useThree } from '@react-three/fiber';
 import { XR, createXRStore, useXR } from '@react-three/xr';
 import * as THREE from 'three';
+import { useStore } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import { useSceneStore } from '../store/scene-store';
 import { useWebXRLighting } from '../hooks/use-webxr-lighting';
@@ -96,7 +98,32 @@ export const SpatialCanvas: React.FC<SpatialCanvasProps> = ({ sessionId }) => {
   const agentIsReasoning = useSceneStore((s) => s.agentIsReasoning);
   const activeTurnCommentary = useSceneStore((s) => s.activeTurnCommentary);
 
-  const [xrStore] = useState(() => createXRStore());
+  // The DOM overlay element the XR session will show.
+  //
+  // In immersive AR the page's own DOM is not composited — only the
+  // element handed to the `dom-overlay` feature is. The library requests
+  // that feature by default, but when it is not given an element it
+  // creates an EMPTY div and uses that: the session starts, the camera
+  // passes through, and there is nothing on screen and nothing to touch.
+  //
+  // So the HUD is portalled into this element for the duration of the
+  // session. The library appends it to document.body on entry and removes
+  // it on exit, which is why it is created once and kept in a ref.
+  const [overlayRoot] = useState<HTMLDivElement | null>(() =>
+    typeof document === 'undefined' ? null : document.createElement('div')
+  );
+  const [xrStore] = useState(() =>
+    createXRStore({
+      ...(overlayRoot ? { domOverlay: overlayRoot } : {}),
+      // Real surfaces to place furniture against. Both default to true,
+      // but naming them keeps the intent visible next to the overlay.
+      planeDetection: true,
+      hitTest: true,
+    })
+  );
+  // Subscribed from the store directly: useXR only works INSIDE the <XR>
+  // provider, and this is the component that renders it.
+  const xrSession = useStore(xrStore, (s) => s.session);
   const [promptInput, setPromptInput] = useState('');
 
   // Connect useAgentSpatialStream for real-time design turn streaming from /api/agent/stream
@@ -128,8 +155,11 @@ export const SpatialCanvas: React.FC<SpatialCanvasProps> = ({ sessionId }) => {
     [promptInput, isStreaming, sendAgentMessage]
   );
 
-  return (
-    <div className="relative w-full h-full min-h-screen bg-neutral-950 overflow-hidden select-none">
+  // The whole HUD, rendered once and placed in one of two homes: the page
+  // when browsing normally, the XR dom-overlay element while a session is
+  // running. Rendering it twice would duplicate the input state.
+  const hud = (
+    <>
       {/* Top Header Overlay */}
       <header className="absolute top-4 left-4 z-50 flex flex-col gap-1 pointer-events-auto">
         <div className="flex items-center gap-2 bg-neutral-900/80 backdrop-blur-md border border-neutral-800 px-3.5 py-1.5 rounded-full text-xs text-neutral-200 shadow-xl">
@@ -268,6 +298,19 @@ export const SpatialCanvas: React.FC<SpatialCanvasProps> = ({ sessionId }) => {
           </button>
         </div>
       </aside>
+    </>
+  );
+
+  return (
+    <div className="relative w-full h-full min-h-screen bg-neutral-950 overflow-hidden select-none">
+      {xrSession && overlayRoot
+        ? createPortal(
+            <div className="absolute inset-0 z-50 pointer-events-none [&_*]:pointer-events-auto">
+              {hud}
+            </div>,
+            overlayRoot
+          )
+        : hud}
 
       {/* 3D WebGL / WebXR Scene Canvas */}
       <Canvas
