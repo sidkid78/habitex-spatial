@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 import { createClientFromRequest } from '../../../../lib/supabase/server';
+import { resolveActor } from '../../../../lib/supabase/dev-auth';
 import type { CatalogCategory } from '../../../../types/supabase';
 
 export const runtime = 'nodejs';
@@ -18,9 +19,12 @@ interface SearchRequestPayload {
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createClientFromRequest();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    // Falls back to a seeded user in development only — see
+    // lib/supabase/dev-auth. In production this is exactly
+    // auth.getUser() and nothing else.
+    const actor = await resolveActor(supabase);
+    
+    if (!actor) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -62,7 +66,7 @@ export async function POST(req: NextRequest) {
     const queryEmbeddingStr = `[${embeddingValues.join(',')}]`;
     const maxDimStr = maxDimensionsMetric ? `[${maxDimensionsMetric.join(',')}]` : null;
 
-    const { data: matchedItemsRaw, error: rpcError } = await supabase.rpc('match_spatial_catalog_items', {
+    const { data: matchedItemsRaw, error: rpcError } = await actor.db.rpc('match_spatial_catalog_items', {
       query_embedding: queryEmbeddingStr,
       match_threshold: matchThreshold,
       match_count: limit,

@@ -11,6 +11,7 @@ import type {
   PBRMaterialDefinition,
 } from '../../types/spatial-client';
 import type { Database } from '../../types/supabase';
+import { ensureDevSession } from '../../lib/supabase/dev-session';
 
 interface RawSceneEntity {
   id: string;
@@ -95,6 +96,12 @@ export function useSceneGraphSync(sessionId: string | null) {
     if (!sessionId) return;
     const supabase = getSupabaseClient();
     if (!supabase) return;
+
+    // RLS returns zero rows to an unauthenticated caller, which reads as
+    // an empty error rather than a denial. In development this signs in
+    // as the seeded user so the policies behave as they will in
+    // production; in production it is a no-op.
+    await ensureDevSession(supabase as unknown as SupabaseClient<never>);
 
     const { data: sessionDataRaw, error } = await supabase
       .from('design_sessions')

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { resolveActor } from '../../../../lib/supabase/dev-auth';
 import { GoogleGenAI, type Content } from '@google/genai';
 import { createClientFromRequest, createAdminClient } from '../../../../lib/supabase/server';
 import type { Database, Json } from '../../../../types/supabase';
@@ -46,9 +47,12 @@ interface IngestPayload {
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createClientFromRequest();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    // Falls back to a seeded user in development only — see
+    // lib/supabase/dev-auth. In production this is exactly
+    // auth.getUser() and nothing else.
+    const actor = await resolveActor(supabase);
+    
+    if (!actor) {
       return NextResponse.json(
         { error: 'Unauthorized', message: 'Authentication required for room scan ingestion.' },
         { status: 401 }
@@ -75,7 +79,7 @@ export async function POST(req: NextRequest) {
       const meshFile = formData.get('mesh') as File | null;
       if (meshFile) {
         meshBuffer = Buffer.from(await meshFile.arrayBuffer());
-        meshFileName = `${user.id}/${Date.now()}_${meshFile.name || 'mesh.usdz'}`;
+        meshFileName = `${actor.userId}/${Date.now()}_${meshFile.name || 'mesh.usdz'}`;
       }
 
       const previewImage = formData.get('previewImage') as File | null;
@@ -146,10 +150,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Insert room scan using a safe cast to bypass deep generic type resolution bugs
-    const { data: scanRecordRaw, error: scanInsertError } = await supabase
+    const { data: scanRecordRaw, error: scanInsertError } = await actor.db
       .from('room_scans')
       .insert({
-        user_id: user.id,
+        user_id: actor.userId,
         client_runtime: clientRuntime,
         device_hardware: deviceHardware,
         storage_mesh_path: storageMeshPath,
@@ -168,10 +172,10 @@ export async function POST(req: NextRequest) {
     const scanRecord = scanRecordRaw as unknown as Database['public']['Tables']['room_scans']['Row'];
 
     // Session Bootstrapping
-    const { data: sessionRecordRaw, error: sessionInsertError } = await supabase
+    const { data: sessionRecordRaw, error: sessionInsertError } = await actor.db
       .from('design_sessions')
       .insert({
-        user_id: user.id,
+        user_id: actor.userId,
         scan_id: scanRecord.id,
         name: payload.sessionName || `Design Session - ${new Date().toLocaleDateString()}`,
         version: 1,

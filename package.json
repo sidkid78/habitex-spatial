@@ -11,7 +11,8 @@
     "test": "vitest run --passWithNoTests",
     "typegen": "next typegen",
     "check:routes": "tsc -p tsconfig.json --noEmit",
-    "gate": "npm run typecheck && npm run test"
+    "gate": "npm run typecheck && npm run test",
+    "seed:dev": "node scripts/seed-dev-session.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.58.0",

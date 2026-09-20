@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClientFromRequest, createAdminClient } from '../../../../lib/supabase/server';
+import { resolveActor } from '../../../../lib/supabase/dev-auth';
 import type { Database, Json } from '../../../../types/supabase';
 
 export const runtime = 'nodejs';
@@ -14,9 +15,12 @@ interface CheckoutItemRequest {
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createClientFromRequest();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    // Falls back to a seeded user in development only — see
+    // lib/supabase/dev-auth. In production this is exactly
+    // auth.getUser() and nothing else.
+    const actor = await resolveActor(supabase);
+    
+    if (!actor) {
       return NextResponse.json({ error: 'Unauthorized', message: 'Sign in to execute checkout.' }, { status: 401 });
     }
 
@@ -89,10 +93,10 @@ export async function POST(req: NextRequest) {
 
     const simulatedPaymentIntentId = `pi_habitex_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
-    const { data: orderRaw, error: orderInsertError } = await supabase
+    const { data: orderRaw, error: orderInsertError } = await actor.db
       .from('orders')
       .insert({
-        user_id: user.id,
+        user_id: actor.userId,
         session_id: sessionId || null,
         status: 'pending_payment',
         total_amount_cents: totalAmountCents,
@@ -116,7 +120,7 @@ export async function POST(req: NextRequest) {
       ...li,
     }));
 
-    const { error: lineItemsError } = await supabase.from('order_items').insert(lineItemRows);
+    const { error: lineItemsError } = await actor.db.from('order_items').insert(lineItemRows);
 
     if (lineItemsError) {
       console.error('[Checkout Line Item Insertion Error]:', lineItemsError);

@@ -13,3 +13,5 @@ next-env.d.ts
 # Agent working state
 .gemini-agent/
 .task_registry.json
+
+certificates

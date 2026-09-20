@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { resolveActor } from '../../../../lib/supabase/dev-auth';
 import { GoogleGenAI, type Content } from '@google/genai';
 import { createClientFromRequest, createAdminClient } from '../../../../lib/supabase/server';
 import { habitexTools } from '../../../../agent/tools';
@@ -32,9 +33,12 @@ function formatSSE(event: StreamEventType, data: Record<string, unknown>): Uint8
 
 export async function POST(req: NextRequest) {
   const supabase = await createClientFromRequest();
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-  if (authError || !user) {
+  // Falls back to a seeded user in development only — see
+  // lib/supabase/dev-auth. In production this is exactly
+  // auth.getUser() and nothing else.
+  const actor = await resolveActor(supabase);
+  
+  if (!actor) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
@@ -54,7 +58,7 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const { data: sessionRaw, error: sessionError } = await supabase
+  const { data: sessionRaw, error: sessionError } = await actor.db
     .from('design_sessions')
     .select(`
       id,
@@ -245,7 +249,7 @@ OPERATIONAL PRINCIPLES:
                 clearanceBufferMeters?: number;
               };
 
-              const { data: itemRaw } = await supabase
+              const { data: itemRaw } = await actor.db
                 .from('spatial_catalog_items')
                 .select('*')
                 .eq('sku', sku)
@@ -464,7 +468,7 @@ OPERATIONAL PRINCIPLES:
       }
 
       if (entitiesToInsertBatch.length > 0 || surfacesToUpsertBatch.length > 0) {
-        const { error: txError } = await supabase.rpc('commit_spatial_mutation_tx', {
+        const { error: txError } = await actor.db.rpc('commit_spatial_mutation_tx', {
           p_session_id: sessionId,
           p_entities: entitiesToInsertBatch as unknown as Json,
           p_surfaces: surfacesToUpsertBatch as unknown as Json,
