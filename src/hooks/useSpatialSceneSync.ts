@@ -20,6 +20,10 @@ export function useSpatialSceneSync({
   const gltfLoaderRef = useRef<GLTFLoader | null>(null);
 
   useEffect(() => {
+    if (!supabaseUrl || !supabaseAnonKey || !sessionId) {
+      return;
+    }
+
     if (!gltfLoaderRef.current) {
       gltfLoaderRef.current = new GLTFLoader();
     }

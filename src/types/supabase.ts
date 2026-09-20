@@ -59,6 +59,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       room_scans: {
         Row: {
@@ -147,6 +148,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       spatial_catalog_items: {
         Row: {
@@ -228,6 +230,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       design_sessions: {
         Row: {
@@ -274,6 +277,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       session_collaborators: {
         Row: {
@@ -297,6 +301,7 @@ export interface Database {
           role?: CollaboratorRole;
           joined_at?: string;
         };
+        Relationships: [];
       };
       scene_entities: {
         Row: {
@@ -342,6 +347,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       surface_modifications: {
         Row: {
@@ -381,6 +387,7 @@ export interface Database {
           applied_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       orders: {
         Row: {
@@ -422,6 +429,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       order_items: {
         Row: {
@@ -454,8 +462,10 @@ export interface Database {
           retailer_id?: string;
           created_at?: string;
         };
+        Relationships: [];
       };
     };
+    Views: Record<string, never>;
     Functions: {
       match_spatial_catalog_items: {
         Args: {

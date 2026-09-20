@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
         shipping_address: shippingAddress as unknown as Json,
         billing_address: shippingAddress as unknown as Json,
         payment_intent_id: simulatedPaymentIntentId,
-      } as unknown as never)
+      })
       .select()
       .single();
       
@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
       ...li,
     }));
 
-    const { error: lineItemsError } = await supabase.from('order_items').insert(lineItemRows as unknown as never);
+    const { error: lineItemsError } = await supabase.from('order_items').insert(lineItemRows);
 
     if (lineItemsError) {
       console.error('[Checkout Line Item Insertion Error]:', lineItemsError);
@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
           .update({
             stock_quantity: Math.max(0, match.stock_quantity - item.quantity),
             in_stock: match.stock_quantity - item.quantity > 0,
-          } as unknown as never)
+          })
           .eq('id', match.id);
       }
     }

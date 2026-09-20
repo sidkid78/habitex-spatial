@@ -5,3 +5,11 @@ out/
 .env
 .env.local
 *.log
+
+# Build artifacts
+*.tsbuildinfo
+next-env.d.ts
+
+# Agent working state
+.gemini-agent/
+.task_registry.json

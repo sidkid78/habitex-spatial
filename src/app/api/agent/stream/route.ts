@@ -363,7 +363,7 @@ OPERATIONAL PRINCIPLES:
 
               await adminSupabase
                 .from('design_sessions')
-                .update({ environment_lighting: activeScene.environmentLighting as unknown as Json } as unknown as never)
+                .update({ environment_lighting: activeScene.environmentLighting as unknown as Json })
                 .eq('id', sessionId);
 
               toolResult = { status: 'SUCCESS', lighting: activeScene.environmentLighting as unknown as Record<string, unknown> };
@@ -468,7 +468,7 @@ OPERATIONAL PRINCIPLES:
           p_session_id: sessionId,
           p_entities: entitiesToInsertBatch as unknown as Json,
           p_surfaces: surfacesToUpsertBatch as unknown as Json,
-        } as unknown as never);
+        });
 
         if (txError) {
           console.error('[Transaction Error RPC]:', txError);

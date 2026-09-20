@@ -157,7 +157,7 @@ export async function POST(req: NextRequest) {
         planes: planes as unknown as Json,
         light_probe: lightProbe as unknown as Json,
         semantic_openings: (payload.semanticOpenings || { doors: [], windows: [] }) as unknown as Json,
-      } as unknown as never)
+      })
       .select()
       .single();
 
@@ -182,7 +182,7 @@ export async function POST(req: NextRequest) {
           ambientIntensity: lightProbe.ambientIntensityLumens,
           directionalRig: [],
         } as unknown as Json,
-      } as unknown as never)
+      })
       .select()
       .single();
 

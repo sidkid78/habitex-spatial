@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
       filter_category: category || null,
       max_price_cents: maxPriceCents || null,
       max_dimensions: maxDimStr,
-    } as unknown as never);
+    });
 
     if (rpcError) {
       console.error('[Inventory Vector Search RPC Failed]:', rpcError);
