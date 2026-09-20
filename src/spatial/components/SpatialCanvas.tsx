@@ -4,6 +4,7 @@ import React, { Suspense, useEffect, useState, useCallback } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { XR, createXRStore, useXR } from '@react-three/xr';
 import * as THREE from 'three';
+import { useShallow } from 'zustand/react/shallow';
 import { useSceneStore } from '../store/scene-store';
 import { useWebXRLighting } from '../hooks/use-webxr-lighting';
 import { useAgentSpatialStream } from '../hooks/use-agent-stream';
@@ -19,8 +20,15 @@ interface SpatialSceneContainerProps {
 
 function SpatialSceneContainer({ sessionId }: SpatialSceneContainerProps) {
   const { scene } = useThree();
-  const planes = useSceneStore((s) => Array.from(s.planes.values()));
-  const entities = useSceneStore((s) => Array.from(s.entities.values()));
+  // useShallow is load-bearing, not a style choice. Zustand reads state
+  // through useSyncExternalStore, which compares snapshots with Object.is.
+  // `Array.from(...)` allocates a NEW array on every call, so the snapshot
+  // never compares equal, React re-renders, the selector allocates again —
+  // "The result of getSnapshot should be cached", then "Maximum update
+  // depth exceeded". useShallow compares the array's contents instead, so
+  // a render only happens when a plane or entity actually changes.
+  const planes = useSceneStore(useShallow((s) => Array.from(s.planes.values())));
+  const entities = useSceneStore(useShallow((s) => Array.from(s.entities.values())));
   const surfaceModifications = useSceneStore((s) => s.surfaceModifications);
   const lighting = useSceneStore((s) => s.lighting);
   const setXRActive = useSceneStore((s) => s.setXRActive);

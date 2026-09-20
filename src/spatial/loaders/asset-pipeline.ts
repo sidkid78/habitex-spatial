@@ -19,7 +19,11 @@ export class SpatialAssetPipeline {
 
     const dracoLoader = new DRACOLoader();
     dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
-    dracoLoader.setDecoderConfig({ type: 'js' });
+    // No setDecoderConfig: it is deprecated and removed in r194, and the
+    // only thing it was doing here was `{ type: 'js' }`, which FORCES the
+    // slow JavaScript decoder. Left alone the loader picks WASM whenever
+    // WebAssembly exists, which is everywhere this app can run at all —
+    // it needs WebGL and WebXR.
     this.gltfLoader.setDRACOLoader(dracoLoader);
 
     this.gltfLoader.setMeshoptDecoder(MeshoptDecoder);
